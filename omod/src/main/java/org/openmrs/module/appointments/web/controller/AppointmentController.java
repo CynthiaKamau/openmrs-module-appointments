@@ -23,6 +23,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
+import org.openmrs.api.VisitService;
+import org.openmrs.Visit;
+import org.openmrs.api.context.Context;
 
 import javax.validation.Valid;
 import java.io.IOException;
@@ -49,6 +52,7 @@ public class AppointmentController extends BaseRestController {
     @Autowired
     private AppointmentServiceMapper appointmentServiceMapper;
 
+    public static final String DATE_FORMAT = "dd/MM/yyyy";
     @RequestMapping(method = RequestMethod.GET, value = "all")
     @ResponseBody
     public List<AppointmentDefaultResponse> getAllAppointments(@RequestParam(value = "forDate", required = false) String forDate) throws ParseException {
@@ -218,6 +222,45 @@ public class AppointmentController extends BaseRestController {
                 return new ResponseEntity<>("The request requires appointment date and status", HttpStatus.BAD_REQUEST);
             }
             List<Appointment> appointments = appointmentsService.getAllAppointments(DateUtil.convertToLocalDateFromUTC(forDate), status);
+            return new ResponseEntity<>(appointmentMapper.constructResponse(appointments), HttpStatus.OK);
+        } catch (Exception e) {
+            log.error("Runtime error while trying to fetch appointments by status and date", e);
+            return new ResponseEntity<>(RestUtil.wrapErrorResponse(e, e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    /**
+     * Returns a list of scheduled appointments on a date for patients with a scheduled visits
+     * @param forDate the appointment date
+     * @param status - the appointment status i.e. scheduled
+     * @return list
+     */
+    @RequestMapping(method = RequestMethod.GET, value = "/honoredAppointments")
+    @ResponseBody
+    public ResponseEntity<Object> getHonoredAppointmentByDate(@RequestParam("forDate") String forDate) {
+        AppointmentStatus status = "Honored";
+        try {
+            if (StringUtils.isEmpty(forDate) || StringUtils.isEmpty(status)) {
+                return new ResponseEntity<>("The request requires appointment date and status", HttpStatus.BAD_REQUEST);
+            }
+            List<Appointment> appointments = appointmentsService.getAllAppointments(DateUtil.convertToLocalDateFromUTC(forDate), status);
+            //get all hiv encounters for day
+            VisitService visitService = Context.getVisitService();
+            Date currentDate = new Date();
+
+            for (Appointment a : appointments) {
+                List<Visit> activeVisit = visitService.getActiveVisitsByPatient(a.getPatient());
+                log.info("activeVisit" + activeVisit);
+
+                if (activeVisit.size() > 0) {
+                    for (Visit v : activeVisit) {
+                        if (DATE_FORMAT.format(v.getStartDatetime()).equalsIgnoreCase(DATE_FORMAT.format(currentDate)) && (a.getPatient().getId() == v.getPatient().getId())) {
+                            a.setStatus(status);
+                        }
+                    }
+                }
+            }
+
             return new ResponseEntity<>(appointmentMapper.constructResponse(appointments), HttpStatus.OK);
         } catch (Exception e) {
             log.error("Runtime error while trying to fetch appointments by status and date", e);

@@ -274,9 +274,10 @@ public class AppointmentMapper {
         for (PatientIdentifier patientIdentifier : p.getIdentifiers()) {
             if (patientIdentifier.getIdentifierType().getName().equalsIgnoreCase("Unique Patient Number")) {
                 map.put("identifier", patientIdentifier.getIdentifier());
-            } else (patientIdentifier.getIdentifierType().getName().equalsIgnoreCase("Patient Clinic Number")) {
-                map.put("identifier", patientIdentifier.getIdentifier());
             }
+//            else (patientIdentifier.getIdentifierType().getName().equalsIgnoreCase("Patient Clinic Number")) {
+//                map.put("identifier", patientIdentifier.getIdentifier());
+//            }
         }
         map.put("gender", p.getGender());
         PersonAttribute patientPhoneAttribute = p.getPerson().getAttribute("Telephone contact");
