@@ -302,6 +302,7 @@ public class AppointmentDaoImpl implements AppointmentDao {
         setPatientCriteria(appointmentSearchRequest, criteria);
         setLimitCriteria(appointmentSearchRequest, criteria);
         setProviderCriteria(appointmentSearchRequest, criteria);
+        setStatusCriteria(appointmentSearchRequest, criteria);
 
         return criteria.list();
     }
@@ -337,6 +338,12 @@ public class AppointmentDaoImpl implements AppointmentDao {
             criteria.setMaxResults(appointmentSearchRequest.getLimit());
         } else if (appointmentSearchRequest.getEndDate() == null) {
             criteria.setMaxResults(APPOINTMENT_SEARCH_DEFAULT_LIMIT);
+        }
+    }
+
+    private void setStatusCriteria(AppointmentSearchRequest appointmentSearchRequest, Criteria criteria) {
+        if(appointmentSearchRequest.getStatus() != null) {
+            criteria.add(Restrictions.eq("status", appointmentSearchRequest.getStatus()));
         }
     }
 
